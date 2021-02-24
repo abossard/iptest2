@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -31,9 +32,15 @@ namespace iptest2
             services.AddControllers();
             services.Configure<ForwardedHeadersOptions>(options =>
             {
-                options.ForwardedHeaders =
-                    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                options.ForwardedHeaders = ForwardedHeaders.All;
                 options.ForwardLimit = 4;
+                var dockerNetworks = new[] {
+                    "::ffff:172.17.0.0", "172.17.0.0", "::ffff:172.16.0.0", "172.16.0.0"
+                }.Select(x => new IPNetwork(IPAddress.Parse(x),16));
+                foreach (var dockerNetwork in dockerNetworks)
+                {
+                    options.KnownNetworks.Add(dockerNetwork);
+                }
             });
             services.AddSwaggerGen(c =>
             {
@@ -53,11 +60,7 @@ namespace iptest2
 
             app.UseForwardedHeaders();
 
-            app.UseHttpsRedirection();
-
             app.UseRouting();
-
-            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
